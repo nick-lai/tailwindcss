@@ -3,7 +3,7 @@ import { run, html, css } from './util/run'
 test('important modifier', () => {
   let config = {
     important: false,
-    darkMode: 'class',
+    darkMode: 'selector',
     content: [
       {
         raw: html`
@@ -143,6 +143,35 @@ test('the important modifier works on utilities using :where()', () => {
       }
       :where(.hover\:focus\:disabled\:\!btn:disabled:focus:hover) {
         background-color: #00f !important;
+      }
+    `)
+  })
+})
+
+test('the important modifier does not break keyframes', () => {
+  let config = {
+    content: [
+      {
+        raw: html` <div class="!animate-pulse"></div> `,
+      },
+    ],
+    corePlugins: { preflight: false },
+  }
+
+  let input = css`
+    @tailwind utilities;
+  `
+
+  return run(input, config).then((result) => {
+    expect(result.css).toMatchFormattedCss(css`
+      @keyframes pulse {
+        50% {
+          opacity: 0.5;
+        }
+      }
+
+      .\!animate-pulse {
+        animation: 2s cubic-bezier(0.4, 0, 0.6, 1) infinite pulse !important;
       }
     `)
   })

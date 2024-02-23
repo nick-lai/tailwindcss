@@ -24,6 +24,9 @@ import { normalize } from './util/dataTypes'
 import { INTERNAL_FEATURES } from './lib/setupContextUtils'
 
 export let variantPlugins = {
+  childVariant: ({ addVariant }) => {
+    addVariant('*', '& > *')
+  },
   pseudoElementVariants: ({ addVariant }) => {
     addVariant('first-letter', '&::first-letter')
     addVariant('first-line', '&::first-line')
@@ -203,8 +206,8 @@ export let variantPlugins = {
   },
 
   directionVariants: ({ addVariant }) => {
-    addVariant('ltr', ':is([dir="ltr"] &)')
-    addVariant('rtl', ':is([dir="rtl"] &)')
+    addVariant('ltr', '&:where([dir="ltr"], [dir="ltr"] *)')
+    addVariant('rtl', '&:where([dir="rtl"], [dir="rtl"] *)')
   },
 
   reducedMotionVariants: ({ addVariant }) => {
@@ -213,7 +216,7 @@ export let variantPlugins = {
   },
 
   darkVariants: ({ config, addVariant }) => {
-    let [mode, className = '.dark'] = [].concat(config('darkMode', 'media'))
+    let [mode, selector = '.dark'] = [].concat(config('darkMode', 'media'))
 
     if (mode === false) {
       mode = 'media'
@@ -224,10 +227,49 @@ export let variantPlugins = {
       ])
     }
 
-    if (mode === 'class') {
-      addVariant('dark', `:is(${className} &)`)
+    if (mode === 'variant') {
+      let formats
+      if (Array.isArray(selector)) {
+        formats = selector
+      } else if (typeof selector === 'function') {
+        formats = selector
+      } else if (typeof selector === 'string') {
+        formats = [selector]
+      }
+
+      // TODO: We could also add these warnings if the user passes a function that returns string | string[]
+      // But this is an advanced enough use case that it's probably not necessary
+      if (Array.isArray(formats)) {
+        for (let format of formats) {
+          if (format === '.dark') {
+            mode = false
+            log.warn('darkmode-variant-without-selector', [
+              'When using `variant` for `darkMode`, you must provide a selector.',
+              'Example: `darkMode: ["variant", ".your-selector &"]`',
+            ])
+          } else if (!format.includes('&')) {
+            mode = false
+            log.warn('darkmode-variant-without-ampersand', [
+              'When using `variant` for `darkMode`, your selector must contain `&`.',
+              'Example `darkMode: ["variant", ".your-selector &"]`',
+            ])
+          }
+        }
+      }
+
+      selector = formats
+    }
+
+    if (mode === 'selector') {
+      // New preferred behavior
+      addVariant('dark', `&:where(${selector}, ${selector} *)`)
     } else if (mode === 'media') {
       addVariant('dark', '@media (prefers-color-scheme: dark)')
+    } else if (mode === 'variant') {
+      addVariant('dark', selector)
+    } else if (mode === 'class') {
+      // Old behavior
+      addVariant('dark', `:is(${selector} &)`)
     }
   },
 
@@ -460,6 +502,10 @@ export let variantPlugins = {
     addVariant('contrast-more', '@media (prefers-contrast: more)')
     addVariant('contrast-less', '@media (prefers-contrast: less)')
   },
+
+  forcedColorsVariants: ({ addVariant }) => {
+    addVariant('forced-colors', '@media (forced-colors: active)')
+  },
 }
 
 let cssTransformValue = [
@@ -680,6 +726,8 @@ export let corePlugins = {
 
   float: ({ addUtilities }) => {
     addUtilities({
+      '.float-start': { float: 'inline-start' },
+      '.float-end': { float: 'inline-end' },
       '.float-right': { float: 'right' },
       '.float-left': { float: 'left' },
       '.float-none': { float: 'none' },
@@ -688,6 +736,8 @@ export let corePlugins = {
 
   clear: ({ addUtilities }) => {
     addUtilities({
+      '.clear-start': { clear: 'inline-start' },
+      '.clear-end': { clear: 'inline-end' },
       '.clear-left': { clear: 'left' },
       '.clear-right': { clear: 'right' },
       '.clear-both': { clear: 'both' },
@@ -772,6 +822,8 @@ export let corePlugins = {
   },
 
   aspectRatio: createUtilityPlugin('aspectRatio', [['aspect', ['aspect-ratio']]]),
+
+  size: createUtilityPlugin('size', [['size', ['width', 'height']]]),
 
   height: createUtilityPlugin('height', [['h', ['height']]]),
   maxHeight: createUtilityPlugin('maxHeight', [['max-h', ['maxHeight']]]),
@@ -1123,6 +1175,7 @@ export let corePlugins = {
   appearance: ({ addUtilities }) => {
     addUtilities({
       '.appearance-none': { appearance: 'none' },
+      '.appearance-auto': { appearance: 'auto' },
     })
   },
 
@@ -1528,6 +1581,7 @@ export let corePlugins = {
       '.text-wrap': { 'text-wrap': 'wrap' },
       '.text-nowrap': { 'text-wrap': 'nowrap' },
       '.text-balance': { 'text-wrap': 'balance' },
+      '.text-pretty': { 'text-wrap': 'pretty' },
     })
   },
 
@@ -2324,6 +2378,7 @@ export let corePlugins = {
       '.mix-blend-saturation': { 'mix-blend-mode': 'saturation' },
       '.mix-blend-color': { 'mix-blend-mode': 'color' },
       '.mix-blend-luminosity': { 'mix-blend-mode': 'luminosity' },
+      '.mix-blend-plus-darker': { 'mix-blend-mode': 'plus-darker' },
       '.mix-blend-plus-lighter': { 'mix-blend-mode': 'plus-lighter' },
     })
   },
@@ -2871,7 +2926,55 @@ export let corePlugins = {
     { filterDefault: true }
   ),
   willChange: createUtilityPlugin('willChange', [['will-change', ['will-change']]]),
+  contain: ({ addDefaults, addUtilities }) => {
+    let cssContainValue =
+      'var(--tw-contain-size) var(--tw-contain-layout) var(--tw-contain-paint) var(--tw-contain-style)'
+
+    addDefaults('contain', {
+      '--tw-contain-size': ' ',
+      '--tw-contain-layout': ' ',
+      '--tw-contain-paint': ' ',
+      '--tw-contain-style': ' ',
+    })
+
+    addUtilities({
+      '.contain-none': { contain: 'none' },
+      '.contain-content': { contain: 'content' },
+      '.contain-strict': { contain: 'strict' },
+      '.contain-size': {
+        '@defaults contain': {},
+        '--tw-contain-size': 'size',
+        contain: cssContainValue,
+      },
+      '.contain-inline-size': {
+        '@defaults contain': {},
+        '--tw-contain-size': 'inline-size',
+        contain: cssContainValue,
+      },
+      '.contain-layout': {
+        '@defaults contain': {},
+        '--tw-contain-layout': 'layout',
+        contain: cssContainValue,
+      },
+      '.contain-paint': {
+        '@defaults contain': {},
+        '--tw-contain-paint': 'paint',
+        contain: cssContainValue,
+      },
+      '.contain-style': {
+        '@defaults contain': {},
+        '--tw-contain-style': 'style',
+        contain: cssContainValue,
+      },
+    })
+  },
   content: createUtilityPlugin('content', [
     ['content', ['--tw-content', ['content', 'var(--tw-content)']]],
   ]),
+  forcedColorAdjust: ({ addUtilities }) => {
+    addUtilities({
+      '.forced-color-adjust-auto': { 'forced-color-adjust': 'auto' },
+      '.forced-color-adjust-none': { 'forced-color-adjust': 'none' },
+    })
+  },
 }

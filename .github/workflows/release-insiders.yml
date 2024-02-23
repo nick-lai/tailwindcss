@@ -64,13 +64,6 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
-
       - name: Setup rust target
         run: rustup target add ${{ matrix.target }}
 
@@ -135,13 +128,6 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
-
       - name: Setup rust target
         run: rustup target add aarch64-apple-darwin
 
@@ -173,18 +159,23 @@ jobs:
           - target: x86_64-unknown-linux-gnu
             strip: strip
             image: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-debian
+            download: false
           - target: aarch64-unknown-linux-gnu
             strip: llvm-strip
             image: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-debian-aarch64
+            download: false
           - target: armv7-unknown-linux-gnueabihf
             strip: llvm-strip
             image: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-debian-zig
+            download: false
           - target: aarch64-unknown-linux-musl
             image: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine
             strip: aarch64-linux-musl-strip
+            download: true
           - target: x86_64-unknown-linux-musl
             image: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine
             strip: strip
+            download: true
 
     name: Build ${{ matrix.target }} (OXIDE)
     runs-on: ubuntu-latest
@@ -229,16 +220,10 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
-
-      - name: Setup cross compile toolchain
-        if: ${{ matrix.setup }}
-        run: ${{ matrix.setup }}
+      - name: Install Rust (Stable)
+        if: ${{ matrix.download }}
+        run: |
+          rustup default stable
 
       - name: Setup rust target
         run: rustup target add ${{ matrix.target }}
@@ -403,19 +388,17 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      # !! Enable this, once we are cleaning up all the `stable` engine related files.
-      #
-      # - name: Trigger Tailwind Play update
-      #   uses: actions/github-script@v6
-      #   with:
-      #     github-token: ${{ secrets.TAILWIND_PLAY_TOKEN }}
-      #     script: |
-      #       await github.rest.actions.createWorkflowDispatch({
-      #         owner: 'tailwindlabs',
-      #         repo: 'play.tailwindcss.com',
-      #         ref: 'master',
-      #         workflow_id: 'upgrade-tailwindcss.yml',
-      #         inputs: {
-      #           insidersVersion: '0.0.0-${{ env.RELEASE_CHANNEL }}.${{ env.SHA_SHORT }}'
-      #         }
-      #       })
+      - name: Trigger Tailwind Play update
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.TAILWIND_PLAY_TOKEN }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: 'tailwindlabs',
+              repo: 'play.tailwindcss.com',
+              ref: 'master',
+              workflow_id: 'upgrade-tailwindcss.yml',
+              inputs: {
+                insidersVersion: '0.0.0-${{ env.RELEASE_CHANNEL }}.${{ env.SHA_SHORT }}'
+              }
+            })

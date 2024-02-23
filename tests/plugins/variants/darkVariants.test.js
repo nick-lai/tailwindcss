@@ -1,28 +1,24 @@
-import { css, quickVariantPluginTest } from '../../util/run'
+import { quickVariantPluginTest } from '../../util/run'
 
 // Default media dark mode
-quickVariantPluginTest('darkVariants').toMatchFormattedCss(css`
-  @media (prefers-color-scheme: dark) {
-    .dark\:flex {
-      display: flex;
-    }
-  }
-`)
+quickVariantPluginTest('darkVariants').toMatchSnapshot()
 
 // Class dark mode
 quickVariantPluginTest('darkVariants', {
   darkMode: 'class',
-}).toMatchFormattedCss(css`
-  :is(.dark .dark\:flex) {
-    display: flex;
-  }
-`)
+}).toMatchSnapshot()
 
 // Class dark mode with custom class name
 quickVariantPluginTest('darkVariants', {
   darkMode: ['class', '.my-dark-mode'],
-}).toMatchFormattedCss(css`
-  :is(.my-dark-mode .dark\:flex) {
-    display: flex;
-  }
-`)
+}).toMatchSnapshot()
+
+// Selector dark mode
+quickVariantPluginTest('darkVariants', {
+  darkMode: 'selector',
+}).toMatchSnapshot()
+
+// Selector dark mode with custom selector
+quickVariantPluginTest('darkVariants', {
+  darkMode: ['selector', '.my-dark-mode'],
+}).toMatchSnapshot()

@@ -2,7 +2,7 @@ import { run, html, css, defaults } from './util/run'
 
 test('it works', () => {
   let config = {
-    darkMode: 'class',
+    darkMode: 'selector',
     content: [
       {
         raw: html`
@@ -304,7 +304,7 @@ test('it works', () => {
       }
       .drop-empty-rules:hover,
       .group:hover .apply-group,
-      :is(.dark .apply-dark-mode) {
+      .apply-dark-mode:where(.dark, .dark *) {
         font-weight: 700;
       }
       .apply-with-existing:hover {
@@ -339,7 +339,7 @@ test('it works', () => {
       .apply-order-b {
         margin: 1.5rem 1.25rem 1.25rem;
       }
-      :is(.dark .group:hover .apply-dark-group-example-a) {
+      .group:hover .apply-dark-group-example-a:where(.dark, .dark *) {
         --tw-bg-opacity: 1;
         background-color: rgb(34 197 94 / var(--tw-bg-opacity));
       }
@@ -401,9 +401,6 @@ test('it works', () => {
       *,
       :before,
       :after {
-        padding: 5px;
-      }
-      ::-webkit-backdrop {
         padding: 5px;
       }
       ::backdrop {
@@ -581,9 +578,6 @@ test('it works', () => {
       :after {
         margin: 10px;
       }
-      ::-webkit-backdrop {
-        margin: 10px;
-      }
       ::backdrop {
         margin: 10px;
       }
@@ -750,9 +744,6 @@ test('it works', () => {
           transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
         }
       }
-      :is(.dark .dark\:custom-util) {
-        background: #abcdef;
-      }
       @media (min-width: 640px) {
         .sm\:text-center {
           text-align: center;
@@ -798,9 +789,6 @@ test('it works', () => {
             transition-duration: 0.15s;
             transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
           }
-          :is(.dark .md\:dark\:motion-safe\:foo\:active\:custom-util:active) {
-            background: #abcdef !important;
-          }
         }
         @media (min-width: 640px) {
           .md\:sm\:text-center {
@@ -816,6 +804,16 @@ test('it works', () => {
       @media (min-width: 640px) and (max-width: 767px), (max-width: 868px) {
         .multi\:text-left {
           text-align: left;
+        }
+      }
+      .dark\:custom-util:where(.dark, .dark *) {
+        background: #abcdef;
+      }
+      @media (min-width: 768px) {
+        @media (prefers-reduced-motion: no-preference) {
+          .md\:dark\:motion-safe\:foo\:active\:custom-util:active:where(.dark, .dark *) {
+            background: #abcdef !important;
+          }
         }
       }
     `)

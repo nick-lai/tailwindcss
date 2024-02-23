@@ -3,17 +3,42 @@ import { parseBoxShadowValue } from './parseBoxShadowValue'
 import { splitAtTopLevelOnly } from './splitAtTopLevelOnly'
 
 let cssFunctions = ['min', 'max', 'clamp', 'calc']
+let IS_CSS_FN = new RegExp(`^(${cssFunctions.join('|')})\\(.*\\)`)
 
 // Ref: https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Types
 
 function isCSSFunction(value) {
-  return cssFunctions.some((fn) => new RegExp(`^${fn}\\(.*\\)`).test(value))
+  return IS_CSS_FN.test(value)
 }
+
+// These properties accept a `<dashed-ident>` as one of the values. This means that you can use them
+// as: `timeline-scope: --tl;`
+//
+// Without the `var(--tl)`, in these cases we don't want to normalize the value, and you should add
+// the `var()` yourself.
+//
+// More info:
+// - https://drafts.csswg.org/scroll-animations/#propdef-timeline-scope
+// - https://developer.mozilla.org/en-US/docs/Web/CSS/timeline-scope#dashed-ident
+//
+const AUTO_VAR_INJECTION_EXCEPTIONS = new Set([
+  // Concrete properties
+  'scroll-timeline-name',
+  'timeline-scope',
+  'view-timeline-name',
+  'font-palette',
+
+  // Shorthand properties
+  'scroll-timeline',
+  'animation-timeline',
+  'view-timeline',
+])
 
 // This is not a data type, but rather a function that can normalize the
 // correct values.
-export function normalize(value, isRoot = true) {
-  if (value.startsWith('--')) {
+export function normalize(value, context = null, isRoot = true) {
+  let isVarException = context && AUTO_VAR_INJECTION_EXCEPTIONS.has(context.property)
+  if (value.startsWith('--') && !isVarException) {
     return `var(${value})`
   }
 
@@ -27,7 +52,7 @@ export function normalize(value, isRoot = true) {
           return part
         }
 
-        return normalize(part, false)
+        return normalize(part, context, false)
       })
       .join('')
   }
@@ -53,13 +78,43 @@ export function normalize(value, isRoot = true) {
 
 /**
  * Add spaces around operators inside math functions
- * like calc() that do not follow an operator or '('.
+ * like calc() that do not follow an operator, '(', or `,`.
  *
  * @param {string} value
  * @returns {string}
  */
 function normalizeMathOperatorSpacing(value) {
   let preventFormattingInFunctions = ['theme']
+  let preventFormattingKeywords = [
+    'min-content',
+    'max-content',
+    'fit-content',
+
+    // Env
+    'safe-area-inset-top',
+    'safe-area-inset-right',
+    'safe-area-inset-bottom',
+    'safe-area-inset-left',
+
+    'titlebar-area-x',
+    'titlebar-area-y',
+    'titlebar-area-width',
+    'titlebar-area-height',
+
+    'keyboard-inset-top',
+    'keyboard-inset-right',
+    'keyboard-inset-bottom',
+    'keyboard-inset-left',
+    'keyboard-inset-width',
+    'keyboard-inset-height',
+
+    'radial-gradient',
+    'linear-gradient',
+    'conic-gradient',
+    'repeating-radial-gradient',
+    'repeating-linear-gradient',
+    'repeating-conic-gradient',
+  ]
 
   return value.replace(/(calc|min|max|clamp)\(.+\)/g, (match) => {
     let result = ''
@@ -102,15 +157,27 @@ function normalizeMathOperatorSpacing(value) {
         result += consumeUntil([')', ','])
       }
 
+      // Skip formatting of known keywords
+      else if (preventFormattingKeywords.some((keyword) => peek(keyword))) {
+        let keyword = preventFormattingKeywords.find((keyword) => peek(keyword))
+        result += keyword
+        i += keyword.length - 1
+      }
+
       // Skip formatting inside known functions
       else if (preventFormattingInFunctions.some((fn) => peek(fn))) {
         result += consumeUntil([')'])
       }
 
+      // Don't break CSS grid track names
+      else if (peek('[')) {
+        result += consumeUntil([']'])
+      }
+
       // Handle operators
       else if (
         ['+', '-', '*', '/'].includes(char) &&
-        !['(', '+', '-', '*', '/'].includes(lastChar())
+        !['(', '+', '-', '*', '/', ','].includes(lastChar())
       ) {
         result += ` ${char} `
       } else {
@@ -172,12 +239,9 @@ let lengthUnits = [
   'cqmax',
 ]
 let lengthUnitsPattern = `(?:${lengthUnits.join('|')})`
+let lengthRegExp = new RegExp(`^[+-]?[0-9]*\.?[0-9]+(?:[eE][+-]?[0-9]+)?${lengthUnitsPattern}$`)
 export function length(value) {
-  return (
-    value === '0' ||
-    new RegExp(`^[+-]?[0-9]*\.?[0-9]+(?:[eE][+-]?[0-9]+)?${lengthUnitsPattern}$`).test(value) ||
-    isCSSFunction(value)
-  )
+  return value === '0' || lengthRegExp.test(value) || isCSSFunction(value)
 }
 
 let lineWidths = new Set(['thin', 'medium', 'thick'])

@@ -66,13 +66,6 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
-
       - name: Setup rust target
         run: rustup target add ${{ matrix.target }}
 
@@ -136,13 +129,6 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
-
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
 
       - name: Setup rust target
         run: rustup target add aarch64-apple-darwin
@@ -230,13 +216,6 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
-
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
 
       - name: Setup cross compile toolchain
         if: ${{ matrix.setup }}
@@ -433,18 +412,31 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      # - name: Trigger Tailwind Play update
-      #   if: env.RELEASE_CHANNEL == 'latest'
-      #   uses: actions/github-script@v6
-      #   with:
-      #     github-token: ${{ secrets.TAILWIND_PLAY_TOKEN }}
-      #     script: |
-      #       await github.rest.actions.createWorkflowDispatch({
-      #         owner: 'tailwindlabs',
-      #         repo: 'play.tailwindcss.com',
-      #         ref: 'master',
-      #         workflow_id: 'upgrade-tailwindcss.yml',
-      #         inputs: {
-      #           version: '${{ env.TAILWINDCSS_VERSION }}'
-      #         }
-      #       })
+      - name: Trigger Tailwind Play update
+        if: env.RELEASE_CHANNEL == 'latest'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.TAILWIND_PLAY_TOKEN }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: 'tailwindlabs',
+              repo: 'play.tailwindcss.com',
+              ref: 'master',
+              workflow_id: 'upgrade-tailwindcss.yml',
+              inputs: {
+                version: '${{ env.TAILWINDCSS_VERSION }}'
+              }
+            })
+
+      - name: Trigger CDN Update
+        if: env.RELEASE_CHANNEL == 'latest'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.CDN_TOKEN }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: 'tailwindlabs',
+              repo: 'jit-cdn',
+              ref: 'main',
+              workflow_id: 'update-versions.yml',
+            })

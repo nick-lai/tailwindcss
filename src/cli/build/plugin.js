@@ -45,15 +45,12 @@ async function lightningcss(result, { map = true, minify = true } = {}) {
       sourceMap: result.map === undefined ? map : !!result.map,
       inputSourceMap: result.map ? result.map.toString() : undefined,
       targets: lightning.browserslistToTargets(browserslist(browsersListConfig)),
-      drafts: {
-        nesting: true,
-      },
       include: Features.Nesting,
       exclude: Features.LogicalProperties,
     })
 
     return Object.assign(result, {
-      css: transformed.code.toString('utf8'),
+      css: transformed.code.toString(),
       map: result.map
         ? Object.assign(result.map, {
             toString() {
@@ -227,15 +224,15 @@ let state = {
   },
 
   getContext({ createContext, cliConfigPath, root, result, content }) {
+    env.DEBUG && console.time('Searching for config')
+    let configPath = findAtConfigPath(root, result) ?? cliConfigPath
+    env.DEBUG && console.timeEnd('Searching for config')
+
     if (this.context) {
       this.context.changedContent = this.changedContent.splice(0)
 
       return this.context
     }
-
-    env.DEBUG && console.time('Searching for config')
-    let configPath = findAtConfigPath(root, result) ?? cliConfigPath
-    env.DEBUG && console.timeEnd('Searching for config')
 
     env.DEBUG && console.time('Loading config')
     let config = this.loadConfig(configPath, content)

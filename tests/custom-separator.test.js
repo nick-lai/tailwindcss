@@ -2,7 +2,7 @@ import { run, html, css } from './util/run'
 
 test('custom separator', () => {
   let config = {
-    darkMode: 'class',
+    darkMode: 'selector',
     content: [
       {
         raw: html`
@@ -22,21 +22,21 @@ test('custom separator', () => {
       .group:hover .group-hover_focus-within_text-left:focus-within {
         text-align: left;
       }
-      :is([dir='rtl'] .rtl_active_text-center:active) {
-        text-align: center;
-      }
       @media (prefers-reduced-motion: no-preference) {
         .motion-safe_hover_text-center:hover {
           text-align: center;
         }
       }
-      :is(.dark .dark_focus_text-left:focus) {
-        text-align: left;
-      }
       @media (min-width: 768px) {
         .md_hover_text-right:hover {
           text-align: right;
         }
+      }
+      .rtl_active_text-center:active:where([dir='rtl'], [dir='rtl'] *) {
+        text-align: center;
+      }
+      .dark_focus_text-left:focus:where(.dark, .dark *) {
+        text-align: left;
       }
     `)
   })
@@ -44,7 +44,7 @@ test('custom separator', () => {
 
 test('dash is not supported', () => {
   let config = {
-    darkMode: 'class',
+    darkMode: 'selector',
     content: [{ raw: 'lg-hover-font-bold' }],
     separator: '-',
   }

@@ -11,11 +11,12 @@ exports[`should test the 'preflight' plugin 1`] = `
   --tw-content: "";
 }
 
-html {
+html, :host {
   -webkit-text-size-adjust: 100%;
   tab-size: 4;
   font-feature-settings: normal;
   font-variation-settings: normal;
+  -webkit-tap-highlight-color: transparent;
   font-family: ui-sans-serif, system-ui, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;
   line-height: 1.5;
 }
@@ -52,6 +53,8 @@ b, strong {
 }
 
 code, kbd, samp, pre {
+  font-feature-settings: normal;
+  font-variation-settings: normal;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
   font-size: 1em;
 }
@@ -97,7 +100,7 @@ button, select {
   text-transform: none;
 }
 
-button, [type="button"], [type="reset"], [type="submit"] {
+button, input:where([type="button"]), input:where([type="reset"]), input:where([type="submit"]) {
   -webkit-appearance: button;
   background-color: #0000;
   background-image: none;
@@ -115,7 +118,11 @@ progress {
   vertical-align: baseline;
 }
 
-:is(::-webkit-inner-spin-button, ::-webkit-outer-spin-button) {
+::-webkit-inner-spin-button {
+  height: auto;
+}
+
+::-webkit-outer-spin-button {
   height: auto;
 }
 
@@ -204,11 +211,12 @@ exports[`should test the 'preflight' plugin 2`] = `
   --tw-content: "";
 }
 
-html {
+html, :host {
   -webkit-text-size-adjust: 100%;
   tab-size: 4;
   font-feature-settings: normal;
   font-variation-settings: normal;
+  -webkit-tap-highlight-color: transparent;
   font-family: ui-sans-serif, system-ui, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;
   line-height: 1.5;
 }
@@ -245,6 +253,8 @@ b, strong {
 }
 
 code, kbd, samp, pre {
+  font-feature-settings: normal;
+  font-variation-settings: normal;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
   font-size: 1em;
 }
@@ -290,7 +300,7 @@ button, select {
   text-transform: none;
 }
 
-button, [type="button"], [type="reset"], [type="submit"] {
+button, input:where([type="button"]), input:where([type="reset"]), input:where([type="submit"]) {
   -webkit-appearance: button;
   background-color: #0000;
   background-image: none;
@@ -308,7 +318,11 @@ progress {
   vertical-align: baseline;
 }
 
-:is(::-webkit-inner-spin-button, ::-webkit-outer-spin-button) {
+::-webkit-inner-spin-button {
+  height: auto;
+}
+
+::-webkit-outer-spin-button {
   height: auto;
 }
 

@@ -155,6 +155,7 @@ it('should work on a real world example', () => {
       .h-available {
         height: 100%;
         height: 100vh;
+        height: -moz-available;
         height: -webkit-fill-available;
       }
     }
@@ -164,6 +165,7 @@ it('should work on a real world example', () => {
     expect(result.css).toMatchFormattedCss(css`
       .h-available {
         height: 100vh;
+        height: -moz-available;
         height: -webkit-fill-available;
       }
     `)

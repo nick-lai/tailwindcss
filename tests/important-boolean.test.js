@@ -7,7 +7,7 @@ import { run, html, css, defaults } from './util/run'
 test('important boolean', () => {
   let config = {
     important: true,
-    darkMode: 'class',
+    darkMode: 'selector',
     content: [
       {
         raw: html`
@@ -137,21 +137,21 @@ test('important boolean', () => {
       .group:hover .group-hover\:focus-within\:text-left:focus-within {
         text-align: left !important;
       }
-      :is([dir='rtl'] .rtl\:active\:text-center:active) {
-        text-align: center !important;
-      }
       @media (prefers-reduced-motion: no-preference) {
         .motion-safe\:hover\:text-center:hover {
           text-align: center !important;
         }
       }
-      :is(.dark .dark\:focus\:text-left:focus) {
-        text-align: left !important;
-      }
       @media (min-width: 768px) {
         .md\:hover\:text-right:hover {
           text-align: right !important;
         }
+      }
+      .rtl\:active\:text-center:active:where([dir='rtl'], [dir='rtl'] *) {
+        text-align: center !important;
+      }
+      .dark\:focus\:text-left:focus:where(.dark, .dark *) {
+        text-align: left !important;
       }
     `)
   })

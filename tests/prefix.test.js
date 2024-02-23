@@ -3,7 +3,7 @@ import { run, html, css, defaults } from './util/run'
 test('prefix', () => {
   let config = {
     prefix: 'tw-',
-    darkMode: 'class',
+    darkMode: 'selector',
     content: [
       {
         raw: html`
@@ -126,7 +126,7 @@ test('prefix', () => {
       .custom-component {
         font-weight: 700;
       }
-      :is(.tw-dark .tw-group:hover .custom-component) {
+      .tw-group:hover .custom-component:where(.tw-dark, .tw-dark *) {
         font-weight: 400;
       }
       .tw--ml-4 {
@@ -153,20 +153,10 @@ test('prefix', () => {
       .tw-group:hover .group-hover\:focus-within\:tw-text-left:focus-within {
         text-align: left;
       }
-      :is([dir='rtl'] .rtl\:active\:tw-text-center:active) {
-        text-align: center;
-      }
       @media (prefers-reduced-motion: no-preference) {
         .motion-safe\:hover\:tw-text-center:hover {
           text-align: center;
         }
-      }
-      :is(.tw-dark .dark\:tw-bg-\[rgb\(255\,0\,0\)\]) {
-        --tw-bg-opacity: 1;
-        background-color: rgb(255 0 0 / var(--tw-bg-opacity));
-      }
-      :is(.tw-dark .dark\:focus\:tw-text-left:focus) {
-        text-align: left;
       }
       @media (min-width: 768px) {
         .md\:tw--ml-5 {
@@ -178,6 +168,16 @@ test('prefix', () => {
         .md\:hover\:tw-text-right:hover {
           text-align: right;
         }
+      }
+      .rtl\:active\:tw-text-center:active:where([dir='rtl'], [dir='rtl'] *) {
+        text-align: center;
+      }
+      .dark\:tw-bg-\[rgb\(255\,0\,0\)\]:where(.tw-dark, .tw-dark *) {
+        --tw-bg-opacity: 1;
+        background-color: rgb(255 0 0 / var(--tw-bg-opacity));
+      }
+      .dark\:focus\:tw-text-left:focus:where(.tw-dark, .tw-dark *) {
+        text-align: left;
       }
     `)
   })

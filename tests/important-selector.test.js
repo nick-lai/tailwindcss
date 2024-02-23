@@ -3,7 +3,7 @@ import { run, html, css, defaults } from './util/run'
 test('important selector', () => {
   let config = {
     important: '#app',
-    darkMode: 'class',
+    darkMode: 'selector',
     content: [
       {
         raw: html`
@@ -135,37 +135,38 @@ test('important selector', () => {
       #app :is(.group:hover .group-hover\:focus-within\:text-left:focus-within) {
         text-align: left;
       }
-      #app :is([dir='rtl'] .rtl\:active\:text-center:active) {
-        text-align: center;
-      }
       @media (prefers-reduced-motion: no-preference) {
         #app .motion-safe\:hover\:text-center:hover {
           text-align: center;
         }
-      }
-      #app :is(.dark .dark\:before\:underline):before {
-        content: var(--tw-content);
-        text-decoration-line: underline;
-      }
-      #app :is(.dark .dark\:focus\:text-left:focus) {
-        text-align: left;
       }
       @media (min-width: 768px) {
         #app .md\:hover\:text-right:hover {
           text-align: right;
         }
       }
+      #app .rtl\:active\:text-center:active:where([dir='rtl'], [dir='rtl'] *) {
+        text-align: center;
+      }
+      #app .dark\:before\:underline:where(.dark, .dark *):before {
+        content: var(--tw-content);
+        text-decoration-line: underline;
+      }
+      #app .dark\:focus\:text-left:focus:where(.dark, .dark *) {
+        text-align: left;
+      }
       #app
-        :-webkit-any(
-          [dir='rtl']
-            :-webkit-any(.dark .hover\:\[\&\:\:file-selector-button\]\:rtl\:dark\:bg-black\/100)
-        )::-webkit-file-upload-button:hover {
+        .hover\:\[\&\:\:file-selector-button\]\:rtl\:dark\:bg-black\/100:where(
+          .dark,
+          .dark *
+        ):where([dir='rtl'], [dir='rtl'] *)::-webkit-file-upload-button:hover {
         background-color: #000;
       }
       #app
-        :is(
-          [dir='rtl'] :is(.dark .hover\:\[\&\:\:file-selector-button\]\:rtl\:dark\:bg-black\/100)
-        )::file-selector-button:hover {
+        .hover\:\[\&\:\:file-selector-button\]\:rtl\:dark\:bg-black\/100:where(
+          .dark,
+          .dark *
+        ):where([dir='rtl'], [dir='rtl'] *)::file-selector-button:hover {
         background-color: #000;
       }
     `)
@@ -175,7 +176,7 @@ test('important selector', () => {
 test('pseudo-elements are appended after the `:-webkit-any()`', () => {
   let config = {
     important: '#app',
-    darkMode: 'class',
+    darkMode: 'selector',
     content: [
       {
         raw: html` <div class="dark:before:flex"></div> `,
@@ -193,7 +194,7 @@ test('pseudo-elements are appended after the `:-webkit-any()`', () => {
   return run(input, config).then((result) => {
     expect(result.css).toMatchFormattedCss(css`
       ${defaults}
-      #app :is(.dark .dark\:before\:flex):before {
+      #app .dark\:before\:flex:where(.dark, .dark *):before {
         content: var(--tw-content);
         display: flex;
       }

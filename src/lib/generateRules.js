@@ -16,7 +16,6 @@ import { normalize } from '../util/dataTypes'
 import { isValidVariantFormatString, parseVariant, INTERNAL_FEATURES } from './setupContextUtils'
 import isValidArbitraryValue from '../util/isSyntacticallyValidPropertyValue'
 import { splitAtTopLevelOnly } from '../util/splitAtTopLevelOnly.js'
-import { flagEnabled } from '../featureFlags'
 import { applyImportantSelector } from '../util/applyImportantSelector'
 
 let classNameParser = selectorParser((selectors) => {
@@ -119,10 +118,20 @@ function applyImportant(matches, classCandidate) {
 
   let result = []
 
+  function isInKeyframes(rule) {
+    return rule.parent && rule.parent.type === 'atrule' && rule.parent.name === 'keyframes'
+  }
+
   for (let [meta, rule] of matches) {
     let container = postcss.root({ nodes: [rule.clone()] })
 
     container.walkRules((r) => {
+      // Declarations inside keyframes cannot be marked as important
+      // They will be ignored by the browser
+      if (isInKeyframes(r)) {
+        return
+      }
+
       let ast = selectorParser().astSync(r.selector)
 
       // Remove extraneous selectors that do not include the base candidate
@@ -492,13 +501,13 @@ function extractArbitraryProperty(classCandidate, context) {
     return null
   }
 
-  let normalized = normalize(value)
+  let normalized = normalize(value, { property })
 
   if (!isParsableCssValue(property, normalized)) {
     return null
   }
 
-  let sort = context.offsets.arbitraryProperty()
+  let sort = context.offsets.arbitraryProperty(classCandidate)
 
   return [
     [
@@ -569,7 +578,7 @@ function* recordCandidates(matches, classCandidate) {
   }
 }
 
-function* resolveMatches(candidate, context, original = candidate) {
+function* resolveMatches(candidate, context) {
   let separator = context.tailwindConfig.separator
   let [classCandidate, ...variants] = splitWithSeparator(candidate, separator).reverse()
   let important = false
@@ -577,15 +586,6 @@ function* resolveMatches(candidate, context, original = candidate) {
   if (classCandidate.startsWith('!')) {
     important = true
     classCandidate = classCandidate.slice(1)
-  }
-
-  if (flagEnabled(context.tailwindConfig, 'variantGrouping')) {
-    if (classCandidate.startsWith('(') && classCandidate.endsWith(')')) {
-      let base = variants.slice().reverse().join(separator)
-      for (let part of splitAtTopLevelOnly(classCandidate.slice(1, -1), ',')) {
-        yield* resolveMatches(base + separator + part, context, original)
-      }
-    }
   }
 
   // TODO: Reintroduce this in ways that doesn't break on false positives
@@ -776,7 +776,7 @@ function* resolveMatches(candidate, context, original = candidate) {
       match[1].raws.tailwind = { ...match[1].raws.tailwind, candidate }
 
       // Apply final format selector
-      match = applyFinalFormat(match, { context, candidate, original })
+      match = applyFinalFormat(match, { context, candidate })
 
       // Skip rules with invalid selectors
       // This will cause the candidate to be added to the "not class"
@@ -790,7 +790,7 @@ function* resolveMatches(candidate, context, original = candidate) {
   }
 }
 
-function applyFinalFormat(match, { context, candidate, original }) {
+function applyFinalFormat(match, { context, candidate }) {
   if (!match[0].collectedFormats) {
     return match
   }
@@ -801,7 +801,7 @@ function applyFinalFormat(match, { context, candidate, original }) {
   try {
     finalFormat = formatVariantSelector(match[0].collectedFormats, {
       context,
-      candidate: original,
+      candidate,
     })
   } catch {
     // The format selector we produced is invalid
@@ -825,10 +825,19 @@ function applyFinalFormat(match, { context, candidate, original }) {
     }
 
     try {
-      rule.selector = finalizeSelector(rule.selector, finalFormat, {
+      let selector = finalizeSelector(rule.selector, finalFormat, {
         candidate,
         context,
       })
+
+      // Finalize Selector determined that this candidate is irrelevant
+      // TODO: This elimination should happen earlier so this never happens
+      if (selector === null) {
+        rule.remove()
+        return
+      }
+
+      rule.selector = selector
     } catch {
       // If this selector is invalid we also want to skip it
       // But it's likely that being invalid here means there's a bug in a plugin rather than too loosely matching content
@@ -838,6 +847,11 @@ function applyFinalFormat(match, { context, candidate, original }) {
   })
 
   if (!isValid) {
+    return null
+  }
+
+  // If all rules have been eliminated we can skip this candidate entirely
+  if (container.nodes.length === 0) {
     return null
   }
 
@@ -878,7 +892,7 @@ function getImportantStrategy(important) {
   }
 }
 
-function generateRules(candidates, context) {
+function generateRules(candidates, context, isSorting = false) {
   let allRules = []
   let strategy = getImportantStrategy(context.tailwindConfig.important)
 
@@ -913,7 +927,9 @@ function generateRules(candidates, context) {
         rule = container.nodes[0]
       }
 
-      let newEntry = [sort, rule]
+      // Note: We have to clone rules during sorting
+      // so we eliminate some shared mutable state
+      let newEntry = [sort, isSorting ? rule.clone() : rule]
       rules.add(newEntry)
       context.ruleCache.add(newEntry)
       allRules.push(newEntry)

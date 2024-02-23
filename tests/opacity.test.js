@@ -2,7 +2,7 @@ import { run, html, css } from './util/run'
 
 test('opacity', () => {
   let config = {
-    darkMode: 'class',
+    darkMode: 'selector',
     content: [
       {
         raw: html`
@@ -42,7 +42,7 @@ test('opacity', () => {
 
 test('colors defined as functions work when opacity plugins are disabled', () => {
   let config = {
-    darkMode: 'class',
+    darkMode: 'selector',
     content: [
       {
         raw: html`
@@ -1042,6 +1042,24 @@ it('can replace the potential alpha value in rgba/hsla syntax', async () => {
     }
     .text-primary-rgba\/50 {
       color: rgba(var(--color), 0.5);
+    }
+  `)
+})
+
+it('variables with variable fallback values can use opacity modifier', async () => {
+  let config = {
+    content: [
+      {
+        raw: html`<div class="bg-[rgb(var(--some-var,var(--some-other-var)))]/50"></div>`,
+      },
+    ],
+  }
+
+  let result = await run(`@tailwind utilities;`, config)
+
+  expect(result.css).toMatchFormattedCss(css`
+    .bg-\[rgb\(var\(--some-var\,var\(--some-other-var\)\)\)\]\/50 {
+      background-color: rgb(var(--some-var, var(--some-other-var)) / 0.5);
     }
   `)
 })

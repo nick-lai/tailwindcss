@@ -75,12 +75,19 @@ type DarkModeConfig =
   | 'class'
   // Use the `class` strategy with a custom class instead of `.dark`.
   | ['class', string]
+  // Use the `selector` strategy — same as `class` but uses `:where()` for more predicable behavior
+  | 'selector'
+  // Use the `selector` strategy with a custom selector instead of `.dark`.
+  | ['selector', string]
+  // Use the `variant` strategy, which allows you to completely customize the selector
+  // It takes a string or an array of strings, which are passed directly to `addVariant()`
+  | ['variant', string | string[]]
 
 type Screen = { raw: string } | { min: string } | { max: string } | { min: string; max: string }
 type ScreensConfig = string[] | KeyValuePair<string, string | Screen | Screen[]>
 
 // Theme related config
-interface ThemeConfig {
+export interface ThemeConfig {
   // Responsiveness
   screens: ResolvableTo<ScreensConfig>
   supports: ResolvableTo<Record<string, string>>
@@ -235,8 +242,9 @@ interface ThemeConfig {
   transitionDuration: ResolvableTo<KeyValuePair>
   willChange: ResolvableTo<KeyValuePair>
   content: ResolvableTo<KeyValuePair>
+}
 
-  // Custom
+interface CustomThemeConfig extends ThemeConfig {
   [key: string]: any
 }
 
@@ -342,6 +350,8 @@ export type PluginsConfig = (
       (options: any): { handler: PluginCreator; config?: Partial<Config> }
       __isOptionsFunction: true
     }
+  | string
+  | [string, Record<string, any>]
 )[]
 
 // Top level config related
@@ -359,7 +369,7 @@ interface OptionalConfig {
   future: Partial<FutureConfig>
   experimental: Partial<ExperimentalConfig>
   darkMode: Partial<DarkModeConfig>
-  theme: Partial<ThemeConfig & { extend: Partial<ThemeConfig> }>
+  theme: Partial<CustomThemeConfig & { extend: Partial<CustomThemeConfig> }>
   corePlugins: Partial<CorePluginsConfig>
   plugins: Partial<PluginsConfig>
   // Custom

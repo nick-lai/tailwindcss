@@ -438,4 +438,79 @@ describe.each([
       expect(extractions).not.toContain(`bold`)
     })
   })
+
+  describe('real world', () => {
+    it.each([
+      [
+        'const myCVAComponent = cva([],{defaultVariants:{size:"md"},variants:{size:{sm:["p-1"],md:["p-1.5"],lg:["p-2"],xl:["p-2.5"]}}});',
+      ],
+      [
+        'const myCVAComponent = cva([],{defaultVariants:{size:"md"}, variants:{size:{sm:["p-1"],md:["p-1.5"],lg:["p-2"],xl:["p-2.5"]}}});',
+      ],
+      [
+        'const myCVAComponent = cva("",{defaultVariants:{size:"md"},variants:{size:{sm:["p-1"],md:["p-1.5"],lg:["p-2"],xl:["p-2.5"]}}});',
+      ],
+    ])('should work for issue #12109 (%#)', async (content) => {
+      let extractions = parse(content)
+
+      expect(extractions).toContain('p-1')
+      expect(extractions).toContain('p-1.5')
+      expect(extractions).toContain('p-2')
+      expect(extractions).toContain('p-2.5')
+    })
+
+    it.each([
+      // With group name modifier
+      [
+        '<div class="bg-blue-300 group-[[data-can-play]:not([data-playing])]/parent:bg-red-300 p-4 w-60" ></div>',
+        [
+          'bg-blue-300',
+          'group-[[data-can-play]:not([data-playing])]/parent:bg-red-300',
+          'p-4',
+          'w-60',
+        ],
+      ],
+      // Without group name modifier
+      [
+        '<div class="bg-blue-300 group-[[data-can-play]:not([data-playing])]:bg-red-300 p-4 w-60">',
+        ['bg-blue-300', 'group-[[data-can-play]:not([data-playing])]:bg-red-300', 'p-4', 'w-60'],
+      ],
+    ])('should work for issue #12169 (%#)', async (content, expectations) => {
+      let extractions = parse(content)
+
+      for (let value of expectations) {
+        expect(extractions).toContain(value)
+      }
+    })
+
+    it.each([
+      ['["min-w-[17rem]","max-w-[17rem]"]', ['min-w-[17rem]', 'max-w-[17rem]']],
+      [
+        '["w-[calc(theme(spacing[2]*-1px))]","h-[calc(theme(spacing[2]*-1px))]"]',
+        ['w-[calc(theme(spacing[2]*-1px))]', 'h-[calc(theme(spacing[2]*-1px))]'],
+      ],
+    ])('should work for issue #12371 (%#)', async (content, expectations) => {
+      let extractions = parse(content)
+
+      for (let value of expectations) {
+        expect(extractions).toContain(value)
+      }
+    })
+
+    it.each([
+      ['@container', ['@container']],
+      ['@container/sidebar', ['@container/sidebar']],
+      ['@container/[sidebar]', ['@container/[sidebar]']],
+      ['@container-size', ['@container-size']],
+      ['@container-size/sidebar', ['@container-size/sidebar']],
+      ['@container-[size]/sidebar', ['@container-[size]/sidebar']],
+      ['@container-[size]/[sidebar]', ['@container-[size]/[sidebar]']],
+    ])('should support utilities starting with @ (%#)', async (content, expectations) => {
+      let extractions = defaultExtractor(content)
+
+      for (let value of expectations) {
+        expect(extractions).toContain(value)
+      }
+    })
+  })
 })

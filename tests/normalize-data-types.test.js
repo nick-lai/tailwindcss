@@ -1,3 +1,4 @@
+import { css, run } from './util/run'
 import { normalize } from '../src/util/dataTypes'
 
 let table = [
@@ -67,6 +68,34 @@ let table = [
   ['calc(theme(spacing.foo-2))', 'calc(theme(spacing.foo-2))'],
   ['calc(theme(spacing.foo-bar))', 'calc(theme(spacing.foo-bar))'],
 
+  // A negative number immediately after a `,` should not have spaces inserted
+  ['clamp(-3px+4px,-3px+4px,-3px+4px)', 'clamp(-3px + 4px,-3px + 4px,-3px + 4px)'],
+
+  // Prevent formatting inside `var()` functions
+  ['calc(var(--foo-bar-bar)*2)', 'calc(var(--foo-bar-bar) * 2)'],
+
+  // Prevent formatting inside `env()` functions
+  ['calc(env(safe-area-inset-bottom)*2)', 'calc(env(safe-area-inset-bottom) * 2)'],
+  // Should format inside `calc()` nested in `env()`
+  ['env(safe-area-inset-bottom,calc(10px+20px))', 'env(safe-area-inset-bottom,calc(10px + 20px))'],
+  [
+    'calc(env(safe-area-inset-bottom,calc(10px+20px))+5px)',
+    'calc(env(safe-area-inset-bottom,calc(10px + 20px)) + 5px)',
+  ],
+
+  // Prevent formatting keywords
+  ['minmax(min-content,25%)', 'minmax(min-content,25%)'],
+
+  // Prevent formatting keywords
+  [
+    'radial-gradient(calc(1+2)),radial-gradient(calc(1+2))',
+    'radial-gradient(calc(1 + 2)),radial-gradient(calc(1 + 2))',
+  ],
+  [
+    '[content-start]_calc(100%-1px)_[content-end]_minmax(1rem,1fr)',
+    '[content-start] calc(100% - 1px) [content-end] minmax(1rem,1fr)',
+  ],
+
   // Misc
   ['color(0_0_0/1.0)', 'color(0 0 0/1.0)'],
   ['color(0_0_0_/_1.0)', 'color(0 0 0 / 1.0)'],
@@ -74,4 +103,32 @@ let table = [
 
 it.each(table)('normalize data: %s', (input, output) => {
   expect(normalize(input)).toBe(output)
+})
+
+it('should not automatically inject the `var()` for properties that accept `<dashed-ident>` as the value', () => {
+  let config = {
+    content: [
+      // Automatic var injection
+      { raw: '[color:--foo]' },
+
+      // Automatic var injection is skipped
+      { raw: '[timeline-scope:--foo]' },
+    ],
+  }
+
+  let input = css`
+    @tailwind utilities;
+  `
+
+  return run(input, config).then((result) => {
+    expect(result.css).toMatchFormattedCss(css`
+      .\[color\:--foo\] {
+        color: var(--foo);
+      }
+
+      .\[timeline-scope\:--foo\] {
+        timeline-scope: --foo;
+      }
+    `)
+  })
 })

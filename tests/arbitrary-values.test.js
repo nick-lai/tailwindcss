@@ -14,6 +14,34 @@ test('arbitrary values', () => {
   })
 })
 
+// TODO: Currently Lightning CSS will throw an error when trying to print the invalid CSS, whereas
+// before it generated invalid CSS without throwing an error.
+//
+// In  perfect world, we would not generate anything, and potentially show a warning.
+test('arbitrary values that result in invalid CSS should not be generated', () => {
+  let config = {
+    content: [
+      {
+        raw: html`<div class="w-full w-[{}] w-[{{}}] [--custom:{}]"></div>`,
+      },
+    ],
+  }
+
+  // NOTE: The version with braces are invalid and therefore produce nothing
+  return run('@tailwind utilities', config).then((result) => {
+    // Required because it tries to reformat the {}
+    // prettier-ignore
+    return expect(result.css).toMatchFormattedCss(css`
+      .w-full {
+        width: 100%;
+      }
+      .\[--custom\:\{\}\] {
+        --custom: {}
+      }
+    `)
+  })
+})
+
 test('should only detect classes with arbitrary values that are properly terminated after the arbitrary value', () => {
   let config = {
     content: [
@@ -32,7 +60,7 @@ it('should be possible to differentiate between decoration utilities', () => {
   let config = {
     content: [
       {
-        raw: html` <div class="decoration-[#ccc] decoration-[3px]"></div> `,
+        raw: html`<div class="decoration-[#ccc] decoration-[3px]"></div>`,
       },
     ],
   }
@@ -53,7 +81,7 @@ it('should support modifiers for arbitrary values that contain the separator', (
   let config = {
     content: [
       {
-        raw: html` <div class="hover:bg-[url('https://github.com/tailwindlabs.png')]"></div> `,
+        raw: html`<div class="hover:bg-[url('https://github.com/tailwindlabs.png')]"></div>`,
       },
     ],
   }
@@ -606,6 +634,49 @@ it('should support underscores in arbitrary modifiers', () => {
       .text-lg\/\[calc\(50px_\*_2\)\] {
         font-size: 1.125rem;
         line-height: 100px;
+      }
+    `)
+  })
+})
+
+it('should support slashes in arbitrary modifiers', () => {
+  let config = {
+    content: [{ raw: html`<div class="text-lg/[calc(50px/1rem)]"></div>` }],
+  }
+
+  return run('@tailwind utilities', config).then((result) => {
+    return expect(result.css).toMatchFormattedCss(css`
+      .text-lg\/\[calc\(50px\/1rem\)\] {
+        font-size: 1.125rem;
+        line-height: calc(50px / 1rem);
+      }
+    `)
+  })
+})
+
+it('should not insert spaces around operators inside `env()`', () => {
+  let config = {
+    content: [{ raw: html`<div class="grid-cols-[calc(env(safe-area-inset-bottom)+1px)]"></div>` }],
+  }
+
+  return run('@tailwind utilities', config).then((result) => {
+    expect(result.css).toMatchFormattedCss(css`
+      .grid-cols-\[calc\(env\(safe-area-inset-bottom\)\+1px\)\] {
+        grid-template-columns: calc(env(safe-area-inset-bottom) + 1px);
+      }
+    `)
+  })
+})
+
+it('should not insert spaces around `-` in arbitrary values that use `max-content`', () => {
+  let config = {
+    content: [{ raw: html`<div class="grid-cols-[repeat(3,_minmax(0,_max-content))]"></div>` }],
+  }
+
+  return run('@tailwind utilities', config).then((result) => {
+    expect(result.css).toMatchFormattedCss(css`
+      .grid-cols-\[repeat\(3\,_minmax\(0\,_max-content\)\)\] {
+        grid-template-columns: repeat(3, minmax(0, max-content));
       }
     `)
   })

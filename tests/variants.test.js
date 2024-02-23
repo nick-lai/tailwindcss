@@ -5,7 +5,7 @@ import { run, html, css, defaults } from './util/run'
 
 test('variants', () => {
   let config = {
-    darkMode: 'class',
+    darkMode: 'selector',
     content: [path.resolve(__dirname, './variants.test.html')],
     corePlugins: { preflight: false },
   }
@@ -37,17 +37,17 @@ test('order matters and produces different behaviour', () => {
 
   return run('@tailwind utilities', config).then((result) => {
     expect(result.css).toMatchFormattedCss(css`
-      .file\:hover\:\[--value\:2\]:hover::-webkit-file-upload-button {
-        --value: 2;
-      }
-      .file\:hover\:\[--value\:2\]:hover::file-selector-button {
-        --value: 2;
-      }
       .hover\:file\:\[--value\:1\]::-webkit-file-upload-button:hover {
         --value: 1;
       }
       .hover\:file\:\[--value\:1\]::file-selector-button:hover {
         --value: 1;
+      }
+      .file\:hover\:\[--value\:2\]:hover::-webkit-file-upload-button {
+        --value: 2;
+      }
+      .file\:hover\:\[--value\:2\]:hover::file-selector-button {
+        --value: 2;
       }
     `)
   })
@@ -1122,7 +1122,7 @@ test('arbitrary variant selectors should not re-order scrollbar pseudo classes',
 
 test('stacking dark and rtl variants', async () => {
   let config = {
-    darkMode: 'class',
+    darkMode: 'selector',
     content: [
       {
         raw: html`<div class="dark:rtl:italic" />`,
@@ -1138,7 +1138,7 @@ test('stacking dark and rtl variants', async () => {
   let result = await run(input, config)
 
   expect(result.css).toMatchFormattedCss(css`
-    :is(.dark :is([dir='rtl'] .dark\:rtl\:italic)) {
+    .dark\:rtl\:italic:where([dir='rtl'], [dir='rtl'] *):where(.dark, .dark *) {
       font-style: italic;
     }
   `)
@@ -1146,7 +1146,7 @@ test('stacking dark and rtl variants', async () => {
 
 test('stacking dark and rtl variants with pseudo elements', async () => {
   let config = {
-    darkMode: 'class',
+    darkMode: 'selector',
     content: [
       {
         raw: html`<div class="dark:rtl:placeholder:italic" />`,
@@ -1162,7 +1162,43 @@ test('stacking dark and rtl variants with pseudo elements', async () => {
   let result = await run(input, config)
 
   expect(result.css).toMatchFormattedCss(css`
-    :is(.dark :is([dir='rtl'] .dark\:rtl\:placeholder\:italic))::placeholder {
+    .dark\:rtl\:placeholder\:italic:where([dir='rtl'], [dir='rtl'] *):where(
+        .dark,
+        .dark *
+      )::placeholder {
+      font-style: italic;
+    }
+  `)
+})
+
+test('* is matched by the parser as the children variant', async () => {
+  let config = {
+    content: [
+      {
+        raw: html`
+          <div class="*:italic" />
+          <div class="*:hover:italic" />
+          <div class="hover:*:italic" />
+          <div class="data-[slot=label]:*:hover:italic" />
+          <div class="[&_p]:*:hover:italic" />
+        `,
+      },
+    ],
+    corePlugins: { preflight: false },
+  }
+
+  let input = css`
+    @tailwind utilities;
+  `
+
+  let result = await run(input, config)
+
+  expect(result.css).toMatchFormattedCss(css`
+    .\*\:italic > *,
+    .\*\:hover\:italic:hover > *,
+    .hover\:\*\:italic > :hover,
+    .data-\[slot\=label\]\:\*\:hover\:italic:hover > [data-slot='label'],
+    .\[\&_p\]\:\*\:hover\:italic:hover > * p {
       font-style: italic;
     }
   `)

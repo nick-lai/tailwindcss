@@ -178,3 +178,65 @@ it('sorts based on first occurrence of a candidate / rule', () => {
     expect(defaultSort(context.getClassOrder(input.split(' ')))).toEqual(output)
   }
 })
+
+it('Sorting is unchanged when multiple candidates share the same rule / object', () => {
+  let classes = [
+    ['x y', 'x y'],
+    ['a', 'a'],
+    ['x y', 'x y'],
+  ]
+
+  let config = {
+    theme: {},
+    plugins: [
+      function ({ addComponents }) {
+        addComponents({
+          '.x': { color: 'red' },
+          '.a': { color: 'red' },
+
+          // This rule matches both the candidate `a` and `y`
+          // When sorting x and y first we would keep that sort order
+          // Then sorting `a` we would end up replacing the candidate on the rule
+          // Thus causing `y` to no longer have a sort order causing it to be sorted
+          // first by accident
+          '.y .a': { color: 'red' },
+        })
+      },
+    ],
+  }
+
+  // Same context, different class lists
+  let context = createContext(resolveConfig(config))
+  for (const [input, output] of classes) {
+    expect(defaultSort(context.getClassOrder(input.split(' ')))).toEqual(output)
+  }
+
+  // Different context, different class lists
+  for (const [input, output] of classes) {
+    context = createContext(resolveConfig(config))
+    expect(defaultSort(context.getClassOrder(input.split(' ')))).toEqual(output)
+  }
+})
+
+it('sorts arbitrary values across one or more class lists consistently', () => {
+  let classes = [
+    ['[--fg:#fff]', '[--fg:#fff]'],
+    ['[--bg:#111] [--bg_hover:#000] [--fg:#fff]', '[--bg:#111] [--bg_hover:#000] [--fg:#fff]'],
+  ]
+
+  let config = {
+    theme: {},
+  }
+
+  // Same context, different class lists
+  let context = createContext(resolveConfig(config))
+  for (const [input, output] of classes) {
+    expect(defaultSort(context.getClassOrder(input.split(' ')))).toEqual(output)
+  }
+
+  // Different context, different class lists
+  for (const [input, output] of classes) {
+    context = createContext(resolveConfig(config))
+    expect(defaultSort(context.getClassOrder(input.split(' ')))).toEqual(output)
+  }
+})
